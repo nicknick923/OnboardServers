@@ -46,13 +46,3 @@ Verify from Frank afterwards:
 ```powershell
 ssh <user>@<newip> 'echo ok'
 ```
-
----
-
-## Other docs
-
-| Scenario | Doc |
-|----------|-----|
-| Adding a new Linux server manually (step-by-step) | [`docs/add-new-server.md`](docs/add-new-server.md) |
-| Giving a new device (laptop, phone) SSH access | [`docs/add-new-admin-device.md`](docs/add-new-admin-device.md) |
-| iPhone setup via Termius | [`docs/iphone-termius-setup.md`](docs/iphone-termius-setup.md) |
