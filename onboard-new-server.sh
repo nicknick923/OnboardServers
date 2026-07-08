@@ -5,12 +5,28 @@ set -euo pipefail
 
 TOM="nick@tom"
 NAME=$(hostname -s)
+NAME_LOWER=$(echo "$NAME" | tr '[:upper:]' '[:lower:]')
+NAME_UPPER=$(echo "$NAME" | tr '[:lower:]' '[:upper:]')
+NAME_TITLE=$(echo "$NAME_LOWER" | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
 IP=$(hostname -I | awk '{print $1}')
 
 TOM_USER_CA_PUB="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINC9Khi3GLlzHOFlzZVLE1xJXhEN5qPCW3gCSAdHVm7g Tom User CA"
 TOM_HOST_CA_PUB="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMBobXiJCfE3mb3niwj4ynngKK2NSUuTeEhW+Q8UWq7F Tom Host CA"
 
 echo "=== SSH CA Onboarding: $NAME ($IP) ==="
+echo ""
+echo "Default host cert principals (all case variants):"
+echo "  $NAME_LOWER  $NAME_UPPER  $NAME_TITLE"
+echo "  $NAME_LOWER.lan  $NAME_UPPER.lan  $NAME_TITLE.lan"
+echo ""
+read -rp "Additional names to include in cert (space-separated, blank to skip): " EXTRA_NAMES
+DEFAULT_PRINCIPALS="$NAME_LOWER,$NAME_UPPER,$NAME_TITLE,$NAME_LOWER.lan,$NAME_UPPER.lan,$NAME_TITLE.lan"
+if [ -n "$EXTRA_NAMES" ]; then
+  EXTRA_PRINCIPALS=$(echo "$EXTRA_NAMES" | tr ' ' ',')
+  ALL_HOST_PRINCIPALS="$DEFAULT_PRINCIPALS,$EXTRA_PRINCIPALS"
+else
+  ALL_HOST_PRINCIPALS="$DEFAULT_PRINCIPALS"
+fi
 echo ""
 
 # --- 1. Trust Tom-signed user certs for incoming connections ---
@@ -52,7 +68,7 @@ scp $SSHOPTS /etc/ssh/ssh_host_ed25519_key.pub /root/.ssh/id_ed25519.pub "$TOM:/
 echo "[5/6] Signing on Tom (you will be prompted for each CA passphrase)..."
 ssh -t $SSHOPTS "$TOM" "
   ssh-keygen -s ~/.ssh/ca/tom_host_ca -I '${NAME}' -h \
-    -n '${NAME},${NAME}.lan,${IP}' -V +52w /tmp/ssh_host_ed25519_key.pub && \
+    -n '${ALL_HOST_PRINCIPALS}' -V +52w /tmp/ssh_host_ed25519_key.pub && \
   ssh-keygen -s ~/.ssh/ca/tom_user_ca -I '${NAME}' -n nick,root \
     -V +52w /tmp/id_ed25519.pub
 "

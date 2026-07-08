@@ -2,11 +2,10 @@
 # Onboards this Windows machine into the Tom SSH CA.
 
 $Tom = "nick@tom"
-$Name = $env:COMPUTERNAME.ToLower()
-
-$defaultIfIndex = (Get-NetRoute -DestinationPrefix '0.0.0.0/0' |
-	Sort-Object RouteMetric | Select-Object -First 1).InterfaceIndex
-$IP = (Get-NetIPAddress -InterfaceIndex $defaultIfIndex -AddressFamily IPv4).IPAddress
+$Name = $env:COMPUTERNAME
+$NameLower = $Name.ToLower()
+$NameUpper = $Name.ToUpper()
+$NameTitle = $NameLower.Substring(0,1).ToUpper() + $NameLower.Substring(1)
 
 $ErrorActionPreference = 'Stop'
 
@@ -36,7 +35,20 @@ function Set-SshdDirective([string]$Path, [string]$Name, [string]$Value) {
 }
 
 Write-Host ""
-Write-Host "=== SSH CA Onboarding: $Name ($IP) ===" -ForegroundColor Cyan
+Write-Host "=== SSH CA Onboarding: $Name ===" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "Default host cert principals (all case variants):"
+Write-Host "  $NameLower  $NameUpper  $NameTitle"
+Write-Host "  $NameLower.lan  $NameUpper.lan  $NameTitle.lan"
+Write-Host ""
+$extraInput = Read-Host "Additional names to include in cert (space-separated, blank to skip)"
+$defaultPrincipals = "$NameLower,$NameUpper,$NameTitle,$NameLower.lan,$NameUpper.lan,$NameTitle.lan"
+if ($extraInput.Trim() -ne '') {
+    $extraPrincipals = $extraInput.Trim() -replace '\s+', ','
+    $allHostPrincipals = "$defaultPrincipals,$extraPrincipals"
+} else {
+    $allHostPrincipals = $defaultPrincipals
+}
 Write-Host ""
 
 # --- 0. Install OpenSSH Client and Server if missing ---
@@ -141,7 +153,7 @@ $hostPub = "$SSH_SYS_DIR\ssh_host_ed25519_key.pub"
 Write-Host "[5/6] Signing on Tom (you will be prompted for each CA passphrase)..."
 $remoteSign = (
     "ssh-keygen -s ~/.ssh/ca/tom_host_ca -I '$Name' -h " +
-    "-n '$Name,$Name.lan,$IP' -V +52w /tmp/ssh_host_ed25519_key.pub && " +
+    "-n '$allHostPrincipals' -V +52w /tmp/ssh_host_ed25519_key.pub && " +
     "ssh-keygen -s ~/.ssh/ca/tom_user_ca -I '$Name' -n nick,root -V +52w /tmp/id_ed25519.pub"
 )
 & ssh -t $Tom $remoteSign
@@ -178,7 +190,7 @@ Write-Host ""
 Write-Host "=== Done! $Name is fully onboarded. ===" -ForegroundColor Green
 Write-Host ""
 Write-Host "Verify from another machine:"
-Write-Host "  ssh $env:USERNAME@$IP 'echo ok'"
+Write-Host "  ssh $env:USERNAME@$Name 'echo ok'"
 Write-Host ""
 Write-Host "Optional - disable password auth (only after verifying cert login works):"
 Write-Host "  Add 'PasswordAuthentication no' to $SSHD_CONFIG and restart sshd."

@@ -17,9 +17,10 @@ ssh -A root@<newip> 'bash <(curl -fsSL https://raw.githubusercontent.com/nicknic
 ```
 
 **What to expect:**
-1. One password prompt to connect to Tom (ControlMaster keeps it open for all transfers)
-2. Prompted for the **host CA passphrase**, then the **user CA passphrase**
-3. Certs are deployed, sshd restarts, temp files on Tom are cleaned up
+1. The script shows the default host cert principals it will generate (all-lower, ALL-UPPER, Title-case, plus `.lan` variants for each) and prompts for any extras — press Enter to skip
+2. One password prompt to connect to Tom (ControlMaster keeps it open for all transfers)
+3. Prompted for the **host CA passphrase**, then the **user CA passphrase**
+4. Certs are deployed, sshd restarts, temp files on Tom are cleaned up
 
 Verify afterwards:
 ```bash
